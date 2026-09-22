@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Simulasi Transaksi Keuangan</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 40px; background: #f4f6f9; }
+    .card { background: white; padding: 24px; border-radius: 8px; max-width: 500px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 20px; }
+    input, button { width: 100%; padding: 10px; margin-top: 10px; box-sizing: border-box; }
+    button { background: #0066cc; color: white; border: none; font-weight: bold; cursor: pointer; border-radius: 4px; }
+    button:hover { background: #0052a3; }
+    pre { background: #272822; color: #f8f8f2; padding: 15px; border-radius: 6px; overflow-x: auto; }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <h2>Informasi Akun</h2>
+    <p>User ID: <strong>USER001</strong></p>
+    <p>Saldo Saat Ini: <span id="balance">Memuat...</span></p>
+    <button onclick="checkBalance()">Cek Saldo Terbaru</button>
+  </div>
+
+  <div class="card">
+    <h2>Form Transaksi Pembayaran</h2>
+    <label>Nominal (Rp):</label>
+    <input type="number" id="amount" value="50000">
+    
+    <label>Keterangan:</label>
+    <input type="text" id="description" value="Pembelian Barang A">
+
+    <button onclick="sendPayment()">Kirim Pembayaran</button>
+  </div>
+
+  <div class="card">
+    <h3>Respon Server:</h3>
+    <pre id="responseLog">Belum ada transaksi.</pre>
+  </div>
+
+  <script>
+    const USER_ID = 'USER001';
+
+    async function checkBalance() {
+      const res = await fetch(`/api/v1/balance/${USER_ID}`);
+      const data = await res.json();
+      document.getElementById('balance').innerText = `Rp ${data.balance.toLocaleString('id-ID')}`;
+    }
+
+    async function sendPayment() {
+      const amount = parseInt(document.getElementById('amount').value);
+      const description = document.getElementById('description').value;
+
+      // Generasi Idempotency Key unik per klik
+      const idempotencyKey = `KEY-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+
+      const res = await fetch('/api/v1/payments/charge', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Idempotency-Key': idempotencyKey
+        },
+        body: JSON.stringify({ userId: USER_ID, amount, description })
+      });
+
+      const result = await res.json();
+      document.getElementById('responseLog').innerText = JSON.stringify(result, null, 2);
+      checkBalance();
+    }
+
+    checkBalance();
+  </script>
+</body>
+</html>
